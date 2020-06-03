@@ -11,6 +11,7 @@ struct instruct{
     int  m; // M
 }instruct;
 
+// opens the file
 FILE *openFile(char fileName[], char mode[], FILE *fp)
 {
     fp=fopen(fileName, mode);
@@ -23,18 +24,19 @@ FILE *openFile(char fileName[], char mode[], FILE *fp)
     return fp;
 }
 
-int instructionCount(FILE *fp)
+// counts the number of lines in the input file
+int instructCount(FILE *fp)
 {
     int count = 0;
     int temp;
-    while (!feof(fp))
+    while(!feof(fp))
     {
-        fscanf(fp, "%d, %d, %d", &temp, &temp, &temp);
-        count++;
+        // stores entire row made up of 3 integers into a temp variable to keep track of position
+      fscanf(fp, "%d%d%d", &temp, &temp, &temp);
+      count++;
     }
     return count;
 }
-
 
 int main()
 {
@@ -48,13 +50,15 @@ int main()
     FILE *fp;
 
     // remember to keep "input.txt" in the same file as the main c file
+    // so that the compiler can find it
     fp=openFile("input.txt", "r", fp);
-    
-    int insCount = instructionCount(fp);
-    printf("\n\the number of instructions is: %d \n", insCount);
+
+    int insCount = instructCount(fp);
+    printf("\nthe number of instructions is: %d \n", insCount);
     rewind(fp);
-    
-    struct instruct stack[insCount]; // 20 is a place holder size, I aught to make it dynamic later
+
+
+    struct instruct stack[insCount];
 
     // scan in and print out what has just been scanned
     // again, this is only hard coded because I don't want to figure out the dynamic at this moment
@@ -109,11 +113,9 @@ int main()
         default:
             // some default/err case
             break;
-
     }
 
 
-
-    close(fp);
+    fclose(fp);
     return 0;
 }
