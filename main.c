@@ -23,6 +23,19 @@ FILE *openFile(char fileName[], char mode[], FILE *fp)
     return fp;
 }
 
+int instructionCount(FILE *fp)
+{
+    int count = 0;
+    int temp;
+    while (!feof(fp))
+    {
+        fscanf(fp, "%d, %d, %d", &temp, &temp, &temp);
+        count++;
+    }
+    return count;
+}
+
+
 int main()
 {
     // CPU Register
@@ -36,8 +49,12 @@ int main()
 
     // remember to keep "input.txt" in the same file as the main c file
     fp=openFile("input.txt", "r", fp);
-
-    struct instruct stack[20]; // 20 is a place holder size, I aught to make it dynamic later
+    
+    int insCount = instructionCount(fp);
+    printf("\n\the number of instructions is: %d \n", insCount);
+    rewind(fp);
+    
+    struct instruct stack[insCount]; // 20 is a place holder size, I aught to make it dynamic later
 
     // scan in and print out what has just been scanned
     // again, this is only hard coded because I don't want to figure out the dynamic at this moment
