@@ -1,7 +1,7 @@
 // COP 3402
 // Project 1- P Machine
 // Due 6/5/2020
-// Victor Torez
+// Victor Torres
 // Maya Awad
 
 #include <stdio.h>
