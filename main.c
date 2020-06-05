@@ -3,8 +3,8 @@
 #include <string.h>
 
 // given default values
-#define MAX_DATA_STACK_HEIGHT 1000;
-#define MAX_CODE_LENGTH 500;
+#define MAX_DATA_STACK_HEIGHT 1000
+#define MAX_CODE_LENGTH 500
 
 struct instruct{
     int OP; // opcode
@@ -21,7 +21,7 @@ FILE *openFile(char fileName[], char mode[], FILE *fp)
         printf("Could not open %s\n", fileName);
         exit(0);
     }
-    printf("file opened\n");
+    //printf("file opened\n");
     return fp;
 }
 
@@ -42,7 +42,7 @@ int countLines(FILE *fp)
     return count;
 }
 
-// crates a string of interpreted assembly language with line number
+// returns a string based on OP
 char *interpertOP(int op)
 {
     // where a, b, and c are the read integers
@@ -90,9 +90,9 @@ char *interpertOP(int op)
     return OP;
 }
 
-void output1(struct instruct ir[], int size)
+void printOutput1(struct instruct ir[], int size, FILE *fpw)
 {
-    FILE *fpw = openFile("output1.txt", "w", fpw);
+    //printf("printOutput1\n");
 
     fprintf(fpw, "Line, OP, L, M \n");
 
@@ -103,7 +103,34 @@ void output1(struct instruct ir[], int size)
         fprintf(fpw, "%d ", ir[i].L);
         fprintf(fpw, "%d \n", ir[i].M);
     }
+    fprintf(fpw, "\n\n\n\n");
 
+}
+int base(int L, int base, int stack[]){
+  int b1 = base;
+  while(L > 0){
+    b1 = stack[b1 - 1];
+    L--;
+  }
+  return b1;
+}
+
+void printStack(int stack[], int SP, int BP, FILE *fp)
+{
+    fprintf(fp, "\t");
+    for (int i = MAX_DATA_STACK_HEIGHT-1; i>=SP ; i--)
+    {
+        if (i == BP && (BP != ( MAX_DATA_STACK_HEIGHT-1) ) )
+        {
+            fprintf(fp, "| ");
+            //printf("| ");
+            BP = BP-7; //assumes each Activation Record can hold 6 inputs
+        }
+        fprintf(fp, "%d ", stack[i]);
+        //printf("%d ", stack[i]);
+    }
+    //printf("\n");
+    fprintf(fp, "\n ");
 }
 int main()
 {
@@ -111,8 +138,8 @@ int main()
     int SP = MAX_DATA_STACK_HEIGHT;
     int BP = SP - 1;
     int PC = 0;
-    //int IR = 0;
-    int Hault = 1;
+    int halt = 1;
+    struct instruct IR; // holds a signular struct from Code
 
     FILE *fp;
     fp=openFile("input.txt", "r", fp);// remember to keep "input.txt" in the same file as the main c file so that the compiler can find it
@@ -122,64 +149,229 @@ int main()
     int num = countLines(fp); //num = number of instructions
 
     // Building and filling out the struct array
-    struct instruct IR[num];
+    struct instruct Code[num];
     int count = 0;
     while(!feof(fp)) // "while not at the end of the file"
     {
-      fscanf(fp, "%d %d %d", &IR[count].OP, &IR[count].L, &IR[count].M); // "scan in 3 numbers per line"
+      fscanf(fp, "%d %d %d", &Code[count].OP, &Code[count].L, &Code[count].M); // "scan in 3 numbers per line"
       count++;
     }
 
-    // print output1 based on the now built IR array
-    output1(IR, num);
+    // print the first half of the output based on the now built Code array
+    FILE *fpw = openFile("output.txt", "w", fpw);
+    printOutput1(Code, num, fpw);
+    //fclose(fp);
+
+    int *stack = calloc(MAX_DATA_STACK_HEIGHT, sizeof(int));
+
+    fprintf(fpw, "\t\t pc  bp  sp \tstack\n");
+    fprintf(fpw, "Initial Values:  %2d %3d %4d\n ", 0, 999, 1000);
 
 
-    /* switch skeleton
-    switch(IR[0].OP)
+
+    int i = 0;
+    while (halt != 0)
     {
-        case 1:
-            // LIT	0, M	Push constant value (literal) M onto the stack
-            break;
-        case 2:
-            // OPR	0, M	Operation to be performed on the data at the top of the stack
-            break;
-        case 3:
-            // LOD	L, M	Load value to top of stack from the stack location at offset M from
-            // L lexicographical levels down
-            break;
-        case 4:
-            // STO	L, M	Store value at top of stack in the stack location at offset M from
-            // L lexicographical levels down
-            break;
-        case 5:
-            // CAL	L, M	Call procedure at code index M (generates new Activation Record
-            // and pc <- M)
-            break;
-        case 6:
-            // INC	0, M	Allocate M locals (increment sp by M). First three are Static Link
-            // (SL), Dynamic Link (DL), and Return Address (RA)
-            break;
-        case 7:
-            // JMP	0, M	Jump to instruction M
-            break;
-        case 8:
-            // JPC	0, M	Jump to instruction M if top stack element is 0
-            break;
-        case 9:
-            // SIO	0, 1	Write the top stack element to the screen
-            break;
-        case 10:
-            // SIO	0, 2	Read in input from the user and store it on top of the stack.
-            break;
-        case 11:
-            // SIO	0, 3	End of Program.
-            break;
-        default:
-            // some default/err case
-            break;
-    }
-*/
+        IR = Code[PC];
+        int lastPC = PC;
+        PC++;
+        switch(IR.OP)
+        {
 
-    fclose(fp);
+          //Load Constant aka LIT
+          case 1:
+              //printf("case %s\n", interpertOP(IR.OP));
+            SP--;
+            stack[SP] = IR.M;
+            break;
+
+          //OPR
+          case 2:
+              //printf("case %s\n", interpertOP(IR.OP));
+            switch(IR.M){
+              //RTN
+              case 0:
+                  //printf("case %s, %s\n", interpertOP(IR.OP), "RTN");
+                SP = BP + 1;
+                BP = stack[(SP - 3)];
+                PC = stack[(SP - 4)];
+                break;
+
+              //NEG
+              case 1:
+                  //printf("case %s, %s\n", interpertOP(IR.OP), "NEG");
+                stack[SP] = -1 * stack[SP];
+                break;
+
+              //ADD
+              case 2:
+                  //printf("case %s, %s\n", interpertOP(IR.OP), "ADD");
+                SP = SP + 1;
+                stack[SP] = stack[SP] + stack[SP - 1];
+                break;
+
+
+              //SUB
+              case 3:
+                  //printf("case %s, %s\n", interpertOP(IR.OP), "SUB");
+                SP = SP + 1;
+                stack[SP] = stack[SP] - stack[SP - 1];
+                break;
+
+              //MUL
+              case 4:
+                  //printf("case %s, %s\n", interpertOP(IR.OP), "MULT");
+                SP = SP + 1;
+                stack[SP] = stack[SP] * stack[SP - 1];
+                break;
+
+              //DIV
+              case 5:
+                  //printf("case %s, %s\n", interpertOP(IR.OP), "DIV");
+                SP = SP + 1;
+                stack[SP] = stack[SP] / stack[SP - 1];
+                break;
+
+              //ODD
+              case 6:
+                  //printf("case %s, %s\n", interpertOP(IR.OP), "ODD");
+                stack[SP] = stack[SP] % 2;
+                break;
+
+              //MOD
+              case 7:
+                  //printf("case %s, %s\n", interpertOP(IR.OP), "MOD");
+                SP = SP + 1;
+                stack[SP] = stack[SP] % stack[SP - 1];
+                break;
+
+              //EQL
+              case 8:
+                  //printf("case %s, %s\n", interpertOP(IR.OP), "EQL");
+              SP = SP + 1;
+                stack[SP] = (stack[SP] == stack[SP - 1]);
+                break;
+
+              //NEQ
+              case 9:
+                  //printf("case %s, %s\n", interpertOP(IR.OP), "NEQ");
+              SP = SP + 1;
+                stack[SP] = (stack[SP] != stack[SP - 1]);
+                break;
+
+              //LSS
+              case 10:
+                  //printf("case %s, %s\n", interpertOP(IR.OP), "LSS");
+                SP = SP + 1;
+                stack[SP] = (stack[SP] < stack[SP - 1]);
+                break;
+
+              //LEQ
+              case 11:
+                  //printf("case %s, %s\n", interpertOP(IR.OP), "LEQ");
+                SP = SP + 1;
+                stack[SP] = (stack[SP] <= stack[SP - 1]);
+                break;
+
+              //GTR
+              case 12:
+                  //printf("case %s, %s\n", interpertOP(IR.OP), "GTR");
+                SP = SP + 1;
+                stack[SP] = (stack[SP] > stack[SP - 1]);
+                break;
+
+              //GEQ
+              case 13:
+                  //printf("case %s, %s\n", interpertOP(IR.OP), "GEQ");
+                SP = SP + 1;
+                stack[SP] = (stack[SP] >= stack[SP - 1]);
+                break;
+
+              default:
+                fprintf(stderr, "Invalid M Entered.");
+              break;
+            } // end of second switch
+            break;
+          //Load to stackister
+          case 3:
+              //printf("case %s\n", interpertOP(IR.OP));
+            SP--;
+            stack[SP] = stack[(base(IR.L, BP, stack) - IR.M)];
+            break;
+
+          //Store to Stack
+          case 4:
+              //printf("case %s\n", interpertOP(IR.OP));
+            stack[base(IR.L, BP, stack) - IR.M] = stack[SP];
+            SP++;
+            break;
+
+          //Call func
+          case 5:
+              //printf("case %s\n", interpertOP(IR.OP));
+            stack[SP - 1] = 0;
+            stack[SP - 2] = base(IR.L, BP, stack);
+            stack[SP - 3] = BP;
+            stack[SP - 4] = PC;
+            BP = SP - 1;
+            PC = IR.M;
+            break;
+
+          //Increment
+          case 6:
+              //printf("case %s\n", interpertOP(IR.OP));
+            SP = SP - IR.M;
+            break;
+
+          //Jump
+            case 7:
+                //printf("case %s\n", interpertOP(IR.OP));
+            PC = IR.M;
+            break;
+
+          //Jump of Zero
+          case 8:
+              //printf("case %s\n", interpertOP(IR.OP));
+            if (stack[SP] == 0){
+                PC = IR.M;
+            }
+            SP++;
+            break;
+
+          //SIO Print stack
+          case 9:
+              //printf("case %s\n", interpertOP(IR.OP));
+            //printf("%i\n", stack[SP]);
+            SP++;
+          break;
+
+          //SIO Read into stack
+          case 10:
+              //printf("case %s\n", interpertOP(IR.OP));
+            SP--;
+            scanf("%i", &stack[SP]);
+            //printf("\n");
+            break;
+
+          //Set Stop
+          case 11:
+              //printf("case %s\n", interpertOP(IR.OP));
+            halt = 0;
+            break;
+
+          default:
+            fprintf(stderr, "Invalid OP Code Entered.");
+        } // end of switch
+
+        //fprintf(fpw, "Initial Values: 0  999  1000");
+        fprintf(fpw, "%2d %s %d %d", lastPC, interpertOP(IR.OP), IR.L, IR.M);
+        fprintf(fpw, "\t%3d %3d %4d ", PC, BP, SP);
+        printStack(stack, SP, BP, fpw);
+
+    }
+
+
+
+
     return 0;
 }
